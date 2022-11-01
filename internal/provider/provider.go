@@ -146,7 +146,7 @@ func (p *AzureAksCommandProvider) GetSchema(_ context.Context) (tfsdk.Schema, di
 				Type:                types.StringType,
 			},
 			"use_oidc": {
-				MarkdownDescription: "Should OIDC be used for Authentication? This can also be sourced from the `ARM_USE_OIDC` Environment Variable. Defaults to false.",
+				MarkdownDescription: "Should OIDC be used for Authentication? This can also be sourced from the `ARM_USE_OIDC` Environment Variable. Defaults to `false`.",
 				Optional:            true,
 				Type:                types.BoolType,
 			},
