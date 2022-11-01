@@ -53,23 +53,23 @@ data "azureakscommand_invoke" "this" {
 
 ### Required
 
-- `command` (String) (String) The command to run.
-- `name` (String) (String) The name of the Managed Kubernetes Cluster to create. Changing this forces a new resource to be created.
-- `resource_group_name` (String) (String) Specifies the Resource Group where the Managed Kubernetes Cluster should exist. Changing this forces a new resource to be created.
+- `command` (String) The command to run.
+- `name` (String) The name of the Managed Kubernetes Cluster to create. Changing this forces a new resource to be created.
+- `resource_group_name` (String) Specifies the Resource Group where the Managed Kubernetes Cluster should exist. Changing this forces a new resource to be created.
 
 ### Optional
 
-- `context` (String) (String) A base64 encoded zip file containing the files required by the command.
-- `triggers` (Map of String) (Map of String) A map of arbitrary strings that, when changed, will force the null resource to be replaced, re-running any associated provisioners.
+- `context` (String) A base64 encoded zip file containing the files required by the command.
+- `triggers` (Map of String) A map of arbitrary strings that, when changed, will force the null resource to be replaced, re-running any associated provisioners.
 
 ### Read-Only
 
-- `exit_code` (Number) (Integer) The exit code of the command
-- `finished_at` (Number) (Integer) The time as unix timestamp when the command finished.
-- `id` (String) (String) The runCommand id
-- `output` (String) (String) The output of the command
-- `provisioning_reason` (String) (String) An explanation of why provisioning_state is set to failed (if so).
-- `provisioning_state` (String) (String) provisioning state
-- `started_at` (Number) (Integer) The time as unix timestamp when the command started.
+- `exit_code` (Number) The exit code of the command
+- `finished_at` (Number) The time as unix timestamp when the command finished.
+- `id` (String) The runCommand id
+- `output` (String) The output of the command
+- `provisioning_reason` (String) An explanation of why provisioning_state is set to failed (if so).
+- `provisioning_state` (String) provisioning state
+- `started_at` (Number) The time as unix timestamp when the command started.
 
 
