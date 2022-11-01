@@ -4,32 +4,57 @@ page_title: "azureakscommand_invoke Resource - terraform-provider-azureakscomman
 subcategory: ""
 description: |-
   A resource to managed a runCommand execution on a AKS
+  The triggers argument allows specifying an arbitrary set of values that, when changed, will cause the resource to be replaced.
 ---
 
 # azureakscommand_invoke (Resource)
 
 A resource to managed a runCommand execution on a AKS
 
+The `triggers` argument allows specifying an arbitrary set of values that, when changed, will cause the resource to be replaced.
+
 ## Example Usage
 
 ```terraform
 # The following example shows how to run the command kubectl cluster-info inside a AKS cluster
 
-resource "azureakscommand_invoke" "this" {
-  resource_group_name = "rg-default"
-  name                = "cluster-name"
+resource "azurerm_resource_group" "example" {
+  name     = "example-resources"
+  location = "West Europe"
+}
+
+resource "azurerm_kubernetes_cluster" "example" {
+  name                = "example-aks1"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+
+  default_node_pool {
+    name       = "default"
+    node_count = 1
+    vm_size    = "Standard_D2_v2"
+  }
+}
+
+resource "azureakscommand_invoke" "example" {
+  resource_group_name = azurerm_resource_group.example.name
+  name                = azurerm_kubernetes_cluster.example.name
 
   command = "kubectl cluster-info"
+
+  # Re-run command, if cluster gets recreated.
+  triggers = {
+    id = azurerm_kubernetes_cluster.example.id
+  }
 }
 
 output "invoke_output" {
-  value = azureakscommand_invoke.this.output
+  value = azureakscommand_invoke.example.output
 }
 
 
 
 # Precondition and Postcondition checks are available with Terraform v1.2.0 and later.
-resource "azureakscommand_invoke" "this" {
+resource "azureakscommand_invoke" "example" {
   resource_group_name = "rg-default"
   name                = "cluster-name"
 
@@ -58,7 +83,7 @@ data "archive_file" "context" {
   }
 }
 
-resource "azureakscommand_invoke" "this" {
+resource "azureakscommand_invoke" "example" {
   resource_group_name = "rg-default"
   name                = "cluster-name"
 
@@ -69,7 +94,7 @@ resource "azureakscommand_invoke" "this" {
 
 
 # helm is natively supported.
-resource "azureakscommand_invoke" "this" {
+resource "azureakscommand_invoke" "example" {
   resource_group_name = "rg-default"
   name                = "cluster-name"
 
@@ -82,22 +107,23 @@ resource "azureakscommand_invoke" "this" {
 
 ### Required
 
-- `command` (String) The command to run.
-- `name` (String) The name of the Managed Kubernetes Cluster to create. Changing this forces a new resource to be created.
-- `resource_group_name` (String) Specifies the Resource Group where the Managed Kubernetes Cluster should exist. Changing this forces a new resource to be created.
+- `command` (String) (String) The command to run.
+- `name` (String) (String) The name of the Managed Kubernetes Cluster to create. Changing this forces a new resource to be created.
+- `resource_group_name` (String) (String) Specifies the Resource Group where the Managed Kubernetes Cluster should exist. Changing this forces a new resource to be created.
 
 ### Optional
 
-- `context` (String) A base64 encoded zip file containing the files required by the command.
+- `context` (String) (String) A base64 encoded zip file containing the files required by the command.
+- `triggers` (Map of String) (Map of String) A map of arbitrary strings that, when changed, will force the null resource to be replaced, re-running any associated provisioners.
 
 ### Read-Only
 
-- `exit_code` (Number) The exit code of the command
-- `finished_at` (Number) The time when the command finished.
-- `id` (String) The command id
-- `output` (String) The output of the command
-- `provisioning_reason` (String) An explanation of why provisioningState is set to failed (if so).
-- `provisioning_state` (String) provisioning State
-- `started_at` (Number) The time when the command started.
+- `exit_code` (Number) (Integer) The exit code of the command
+- `finished_at` (Number) (Integer) The time as unix timestamp when the command finished.
+- `id` (String) (String) The runCommand id
+- `output` (String) (String) The output of the command
+- `provisioning_reason` (String) (String) An explanation of why provisioning_state is set to failed (if so).
+- `provisioning_state` (String) (String) provisioning state
+- `started_at` (Number) (Integer) The time as unix timestamp when the command started.
 
 

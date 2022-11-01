@@ -13,17 +13,40 @@ provider "azurerm" {
 
 data "azurerm_subscription" "current" {}
 
+resource "azurerm_resource_group" "example" {
+  name     = "example-resources"
+  location = "West Europe"
+}
+
+resource "azurerm_kubernetes_cluster" "example" {
+  name                = "example-aks1"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+
+  default_node_pool {
+    name       = "default"
+    node_count = 1
+    vm_size    = "Standard_D2_v2"
+  }
+}
+
+
 provider "azureakscommand" {
   tenant_id       = data.azurerm_subscription.current.tenant_id
   subscription_id = data.azurerm_subscription.current.subscription_id
 }
 
-resource "azureakscommand_invoke" "this" {
-  resource_group_name = "rg-default"
-  name                = "cluster-name"
+resource "azureakscommand_invoke" "example" {
+  resource_group_name = azurerm_resource_group.example.name
+  name                = azurerm_kubernetes_cluster.example.name
 
   command = "kubectl cluster-info"
-  
+
+  # Re-run command, if cluster gets recreated.
+  triggers = {
+    id = azurerm_kubernetes_cluster.example.id
+  }
+
   # Precondition and Postcondition checks are available with Terraform v1.2.0 and later.
   lifecycle {
     postcondition {
@@ -34,7 +57,7 @@ resource "azureakscommand_invoke" "this" {
 }
 
 output "invoke_output" {
-  value = azureakscommand_invoke.this.output
+  value = azureakscommand_invoke.example.output
 }
 ```
 
@@ -47,10 +70,6 @@ provider "azurerm" {
 
 data "azurerm_subscription" "current" {}
 
-provider "azureakscommand" {
-  tenant_id       = data.azurerm_subscription.current.tenant_id
-  subscription_id = data.azurerm_subscription.current.subscription_id
-}
 
 provider "archive" {}
 
@@ -60,7 +79,13 @@ data "archive_file" "manifests" {
   source_dir  = "${path.module}/manifests/"
 }
 
-resource "azureakscommand_invoke" "this" {
+
+provider "azureakscommand" {
+  tenant_id       = data.azurerm_subscription.current.tenant_id
+  subscription_id = data.azurerm_subscription.current.subscription_id
+}
+
+resource "azureakscommand_invoke" "example" {
   resource_group_name = "rg-default"
   name                = "cluster-name"
 
@@ -83,12 +108,14 @@ provider "azureakscommand" {
   subscription_id = data.azurerm_subscription.current.subscription_id
 }
 
-resource "azureakscommand_invoke" "this" {
+resource "azureakscommand_invoke" "example" {
   resource_group_name = "rg-default"
   name                = "cluster-name"
 
   command = join("&&", [
-    "helm install my-release --repo https://charts.bitnami.com/bitnami nginx"
+    "helm repo add bitnami https://charts.bitnami.com/bitnami",
+    "helm repo update",
+    "helm install my-release --repo bitnami/nginx"
   ])
 }
 ```

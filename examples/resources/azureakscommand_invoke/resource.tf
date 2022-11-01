@@ -1,20 +1,42 @@
 # The following example shows how to run the command kubectl cluster-info inside a AKS cluster
 
-resource "azureakscommand_invoke" "this" {
-  resource_group_name = "rg-default"
-  name                = "cluster-name"
+resource "azurerm_resource_group" "example" {
+  name     = "example-resources"
+  location = "West Europe"
+}
+
+resource "azurerm_kubernetes_cluster" "example" {
+  name                = "example-aks1"
+  location            = azurerm_resource_group.example.location
+  resource_group_name = azurerm_resource_group.example.name
+
+  default_node_pool {
+    name       = "default"
+    node_count = 1
+    vm_size    = "Standard_D2_v2"
+  }
+}
+
+resource "azureakscommand_invoke" "example" {
+  resource_group_name = azurerm_resource_group.example.name
+  name                = azurerm_kubernetes_cluster.example.name
 
   command = "kubectl cluster-info"
+
+  # Re-run command, if cluster gets recreated.
+  triggers = {
+    id = azurerm_kubernetes_cluster.example.id
+  }
 }
 
 output "invoke_output" {
-  value = azureakscommand_invoke.this.output
+  value = azureakscommand_invoke.example.output
 }
 
 
 
 # Precondition and Postcondition checks are available with Terraform v1.2.0 and later.
-resource "azureakscommand_invoke" "this" {
+resource "azureakscommand_invoke" "example" {
   resource_group_name = "rg-default"
   name                = "cluster-name"
 
@@ -43,7 +65,7 @@ data "archive_file" "context" {
   }
 }
 
-resource "azureakscommand_invoke" "this" {
+resource "azureakscommand_invoke" "example" {
   resource_group_name = "rg-default"
   name                = "cluster-name"
 
@@ -54,7 +76,7 @@ resource "azureakscommand_invoke" "this" {
 
 
 # helm is natively supported.
-resource "azureakscommand_invoke" "this" {
+resource "azureakscommand_invoke" "example" {
   resource_group_name = "rg-default"
   name                = "cluster-name"
 
