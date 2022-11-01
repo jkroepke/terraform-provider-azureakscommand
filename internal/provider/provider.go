@@ -138,6 +138,7 @@ func (p *AzureAksCommandProvider) GetSchema(_ context.Context) (tfsdk.Schema, di
 			"oidc_token": {
 				MarkdownDescription: "The ID token when authenticating using OpenID Connect (OIDC). This can also be sourced from the `ARM_OIDC_TOKEN` environment Variable.",
 				Optional:            true,
+				Sensitive:           true,
 				Type:                types.StringType,
 			},
 			"oidc_token_file_path": {
