@@ -3,10 +3,15 @@ package provider
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/go-azure-helpers/authentication"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/meta"
+	"github.com/jkroepke/terraform-provider-azure-aks-command/internal/clients"
 	"github.com/jkroepke/terraform-provider-azure-aks-command/internal/helpers"
-	"net/http"
 	"os"
 	"strings"
 
@@ -50,28 +55,33 @@ type AzureAksCommandProviderModel struct {
 	PartnerId                 types.String `tfsdk:"partner_id"`
 }
 
-func (p *AzureAksCommandProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "azure-aks-command"
+type AzureAksCommandClient struct {
+	cred   azcore.TokenCredential
+	client *armcontainerservice.ManagedClustersClient
+}
+
+func (p *AzureAksCommandProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "azureakscommand"
 	resp.Version = p.version
 }
 
-func (p *AzureAksCommandProvider) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (p *AzureAksCommandProvider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
+		Description: "A terraform provider to run commands inside AKS through Azure API. It doesn't require any connection to the AKS.\n\n" +
+			"See https://learn.microsoft.com/en-us/azure/aks/command-invoke for more information.",
 		Attributes: map[string]tfsdk.Attribute{
 			"subscription_id": {
 				Description: "The Subscription ID which should be used.",
-				Optional:    true,
+				Required:    true,
 				Type:        types.StringType,
-				Computed:    true,
 				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_SUBSCRIPTION_ID"}, DefaultValue: ""},
+					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_SUBSCRIPTION_ID", "AZURE_SUBSCRIPTION_ID"}, DefaultValue: ""},
 				},
 			},
 			"client_id": {
 				Description: "The Client ID which should be used.",
 				Optional:    true,
 				Type:        types.StringType,
-				Computed:    true,
 				PlanModifiers: []tfsdk.AttributePlanModifier{
 					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_CLIENT_ID"}, DefaultValue: ""},
 				},
@@ -80,7 +90,6 @@ func (p *AzureAksCommandProvider) GetSchema(ctx context.Context) (tfsdk.Schema, 
 				Description: "The Tenant ID which should be used.",
 				Optional:    true,
 				Type:        types.StringType,
-				Computed:    true,
 				PlanModifiers: []tfsdk.AttributePlanModifier{
 					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_TENANT_ID"}, DefaultValue: ""},
 				},
@@ -89,7 +98,6 @@ func (p *AzureAksCommandProvider) GetSchema(ctx context.Context) (tfsdk.Schema, 
 				Description: "The Cloud Environment which should be used. Possible values are public, usgovernment, and china. Defaults to public.",
 				Optional:    true,
 				Type:        types.StringType,
-				Computed:    true,
 				PlanModifiers: []tfsdk.AttributePlanModifier{
 					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_ENVIRONMENT"}, DefaultValue: "public"},
 				},
@@ -98,7 +106,6 @@ func (p *AzureAksCommandProvider) GetSchema(ctx context.Context) (tfsdk.Schema, 
 				Description: "The Hostname which should be used for the Azure Metadata Service.",
 				Optional:    true,
 				Type:        types.StringType,
-				Computed:    true,
 				PlanModifiers: []tfsdk.AttributePlanModifier{
 					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_METADATA_HOSTNAME"}, DefaultValue: ""},
 				},
@@ -109,7 +116,6 @@ func (p *AzureAksCommandProvider) GetSchema(ctx context.Context) (tfsdk.Schema, 
 				Description: "The path to the Client Certificate associated with the Service Principal for use when authenticating as a Service Principal using a Client Certificate.",
 				Optional:    true,
 				Type:        types.StringType,
-				Computed:    true,
 				PlanModifiers: []tfsdk.AttributePlanModifier{
 					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_CLIENT_CERTIFICATE_PATH"}, DefaultValue: ""},
 				},
@@ -118,7 +124,6 @@ func (p *AzureAksCommandProvider) GetSchema(ctx context.Context) (tfsdk.Schema, 
 				Description: "The password associated with the Client Certificate. For use when authenticating as a Service Principal using a Client Certificate",
 				Optional:    true,
 				Type:        types.StringType,
-				Computed:    true,
 				PlanModifiers: []tfsdk.AttributePlanModifier{
 					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_CLIENT_CERTIFICATE_PASSWORD"}, DefaultValue: ""},
 				},
@@ -129,18 +134,16 @@ func (p *AzureAksCommandProvider) GetSchema(ctx context.Context) (tfsdk.Schema, 
 				Description: "The Client Secret which should be used. For use When authenticating as a Service Principal using a Client Secret.",
 				Optional:    true,
 				Type:        types.StringType,
-				Computed:    true,
 				PlanModifiers: []tfsdk.AttributePlanModifier{
 					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_CLIENT_SECRET"}, DefaultValue: ""},
 				},
 			},
 
-			// OIDC specifc fields
+			// OIDC specific fields
 			"oidc_request_token": {
 				Description: "The bearer token for the request to the OIDC provider. For use when authenticating as a Service Principal using OpenID Connect.",
 				Optional:    true,
 				Type:        types.StringType,
-				Computed:    true,
 				PlanModifiers: []tfsdk.AttributePlanModifier{
 					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_OIDC_REQUEST_TOKEN", "ACTIONS_ID_TOKEN_REQUEST_TOKEN"}, DefaultValue: ""},
 				},
@@ -149,16 +152,14 @@ func (p *AzureAksCommandProvider) GetSchema(ctx context.Context) (tfsdk.Schema, 
 				Description: "The URL for the OIDC provider from which to request an ID token. For use when authenticating as a Service Principal using OpenID Connect.",
 				Optional:    true,
 				Type:        types.StringType,
-				Computed:    true,
 				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_OIDC_REQUEST_TOKEN", "ACTIONS_ID_TOKEN_REQUEST_TOKEN"}, DefaultValue: ""},
+					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_OIDC_REQUEST_URL", "ACTIONS_ID_TOKEN_REQUEST_URL"}, DefaultValue: ""},
 				},
 			},
 			"oidc_token": {
 				Description: "The OIDC ID token for use when authenticating as a Service Principal using OpenID Connect.",
 				Optional:    true,
 				Type:        types.StringType,
-				Computed:    true,
 				PlanModifiers: []tfsdk.AttributePlanModifier{
 					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_OIDC_TOKEN"}, DefaultValue: ""},
 				},
@@ -167,7 +168,6 @@ func (p *AzureAksCommandProvider) GetSchema(ctx context.Context) (tfsdk.Schema, 
 				Description: "The path to a file containing an OIDC ID token for use when authenticating as a Service Principal using OpenID Connect.",
 				Optional:    true,
 				Type:        types.StringType,
-				Computed:    true,
 				PlanModifiers: []tfsdk.AttributePlanModifier{
 					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_OIDC_TOKEN_FILE_PATH"}, DefaultValue: ""},
 				},
@@ -176,7 +176,6 @@ func (p *AzureAksCommandProvider) GetSchema(ctx context.Context) (tfsdk.Schema, 
 				Description: "Allow OpenID Connect to be used for authentication",
 				Optional:    true,
 				Type:        types.BoolType,
-				Computed:    true,
 				PlanModifiers: []tfsdk.AttributePlanModifier{
 					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_USE_OIDC"}, DefaultValue: false},
 				},
@@ -187,7 +186,6 @@ func (p *AzureAksCommandProvider) GetSchema(ctx context.Context) (tfsdk.Schema, 
 				Description: "Allowed Managed Service Identity be used for Authentication.",
 				Type:        types.BoolType,
 				Optional:    true,
-				Computed:    true,
 				PlanModifiers: []tfsdk.AttributePlanModifier{
 					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_USE_MSI"}, DefaultValue: false},
 				},
@@ -196,7 +194,6 @@ func (p *AzureAksCommandProvider) GetSchema(ctx context.Context) (tfsdk.Schema, 
 				Description: "The path to a custom endpoint for Managed Service Identity - in most circumstances this should be detected automatically. ",
 				Type:        types.StringType,
 				Optional:    true,
-				Computed:    true,
 				PlanModifiers: []tfsdk.AttributePlanModifier{
 					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_MSI_ENDPOINT"}, DefaultValue: false},
 				},
@@ -207,7 +204,6 @@ func (p *AzureAksCommandProvider) GetSchema(ctx context.Context) (tfsdk.Schema, 
 				Description: "A GUID/UUID that is registered with Microsoft to facilitate partner resource usage attribution.",
 				Type:        types.StringType,
 				Optional:    true,
-				Computed:    true,
 				PlanModifiers: []tfsdk.AttributePlanModifier{
 					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_PARTNER_ID"}, DefaultValue: ""},
 				},
@@ -225,72 +221,117 @@ func (p *AzureAksCommandProvider) Configure(ctx context.Context, req provider.Co
 		return
 	}
 
-	builder := &authentication.Builder{
-		SubscriptionID:      data.SubscriptionId.ValueString(),
-		Environment:         data.Environment.ValueString(),
-		MetadataHost:        data.MetadataHost.ValueString(),
-		MsiEndpoint:         data.MsiEndpoint.ValueString(),
-		ClientCertPassword:  data.ClientCertificatePassword.ValueString(),
-		ClientCertPath:      data.ClientCertificatePath.ValueString(),
-		IDTokenRequestToken: data.OidcRequestToken.ValueString(),
-		IDTokenRequestURL:   data.OidcRequestUrl.ValueString(),
-		IDToken:             data.OidcToken.ValueString(),
-		IDTokenFilePath:     data.OidcTokenFilePath.ValueString(),
+	setEnvIfNotExists("AZURE_CLIENT_ID", data.ClientId.ValueString())
+	setEnvIfNotExists("AZURE_CLIENT_SECRET", data.ClientSecret.ValueString())
+	setEnvIfNotExists("AZURE_CERTIFICATE_PATH", data.ClientCertificatePath.ValueString())
+	setEnvIfNotExists("AZURE_CERTIFICATE_PASSWORD", data.ClientCertificatePassword.ValueString())
+	setEnvIfNotExists("AZURE_ENVIRONMENT", data.Environment.ValueString())
 
-		// Feature Toggles
-		SupportsClientCertAuth:         true,
-		SupportsClientSecretAuth:       true,
-		SupportsOIDCAuth:               data.UseOidc.ValueBool(),
-		SupportsManagedServiceIdentity: data.UseMsi.ValueBool(),
-		SupportsAzureCliToken:          true,
-		SupportsAuxiliaryTenants:       false,
+	if data.UseMsi.ValueBool() {
+		setEnvIfNotExists("MSI_ENDPOINT", data.MsiEndpoint.ValueString())
+	} else if data.UseOidc.ValueBool() {
+		var token string
 
-		// Doc Links
-		ClientSecretDocsLink: "https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/guides/service_principal_client_secret",
+		if data.OidcRequestUrl.ValueString() != "" && data.OidcRequestToken.ValueString() != "" {
+			var err error
 
-		// Use MSAL
-		UseMicrosoftGraph: true,
+			token, err = helpers.GetOidcTokenFromGithubActions(data.OidcRequestUrl.ValueString(), data.OidcRequestToken.ValueString())
+			if err != nil {
+				resp.Diagnostics.AddError("Error while request token from GH API", err.Error())
+				return
+			}
+		} else if data.OidcToken.ValueString() != "" {
+			token = data.OidcToken.ValueString()
+		}
+
+		if token != "" {
+			f, err := os.CreateTemp("", "token*")
+			if err != nil {
+				resp.Diagnostics.AddError("Error while request token from GH API", err.Error())
+				return
+			}
+
+			_, err = f.WriteString(data.OidcToken.ValueString())
+			if err != nil {
+				resp.Diagnostics.AddError("Error while request token from GH API", err.Error())
+				return
+			}
+
+			_ = os.Setenv("AZURE_FEDERATED_TOKEN_FILE", f.Name())
+
+			defer func(name string) {
+				_ = os.Remove(name)
+			}(f.Name())
+		} else {
+			_ = os.Setenv("AZURE_FEDERATED_TOKEN_FILE", data.OidcTokenFilePath.ValueString())
+		}
 	}
 
-	config, err := builder.Build()
+	userAgent := buildUserAgent(req.TerraformVersion, p.version, data.PartnerId.ValueString())
+
+	cred, err := helpers.NewAzureCredential(
+		&azidentity.DefaultAzureCredentialOptions{
+			TenantID: data.TenantId.ValueString(),
+			ClientOptions: azcore.ClientOptions{
+				Cloud: p.getCloudConfig(data),
+				PerCallPolicies: []policy.Policy{
+					clients.WithUserAgent(userAgent),
+				},
+			},
+		},
+	)
 
 	if err != nil {
-		resp.Diagnostics.AddError("building AzureRM Client", err.Error())
+		resp.Diagnostics.AddError("Error while request token for AKS", err.Error())
 		return
 	}
 
-	/*
-		_ = os.Setenv("AZURE_TENANT_ID", data.TenantId.ValueString())
-		_ = os.Setenv("AZURE_CLIENT_ID", data.ClientId.ValueString())
-		_ = os.Setenv("AZURE_CLIENT_SECRET", data.ClientSecret.ValueString())
-		_ = os.Setenv("AZURE_CERTIFICATE_PATH", data.ClientCertificatePath.ValueString())
-		_ = os.Setenv("AZURE_CERTIFICATE_PASSWORD", data.ClientCertificatePassword.ValueString())
-		_ = os.Setenv("AZURE_ENVIRONMENT", data.Environment.ValueString())
+	client, err := armcontainerservice.NewManagedClustersClient(data.SubscriptionId.ValueString(), cred, &arm.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: p.getCloudConfig(data),
+			PerCallPolicies: []policy.Policy{
+				clients.WithUserAgent(userAgent),
+			},
+		},
+	})
 
-		_ = os.Setenv("AZURE_FEDERATED_TOKEN_FILE", data.OidcTokenFilePath.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error while request token for AKS", err.Error())
+		return
+	}
 
-		cred, err := helpers.NewAzureCredential()
-		resp.Diagnostics.AddError("Error while authenticate against azure", err.Error())
-
-		cred.GetToken(ctx, policy.TokenRequestOptions{})
-
-	*/
-
-	// Example client configuration for data sources and resources
-	client := http.DefaultClient
-	resp.DataSourceData = client
-	resp.ResourceData = client
-}
-
-func (p *AzureAksCommandProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
-		NewExampleResource,
+	resp.DataSourceData = AzureAksCommandClient{
+		cred:   cred,
+		client: client,
+	}
+	resp.ResourceData = AzureAksCommandClient{
+		cred:   cred,
+		client: client,
 	}
 }
 
-func (p *AzureAksCommandProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+func (p *AzureAksCommandProvider) getCloudConfig(data AzureAksCommandProviderModel) cloud.Configuration {
+	switch data.Environment.ValueString() {
+	case "public":
+		return cloud.AzurePublic
+	case "usgovernment":
+		return cloud.AzureGovernment
+	case "china":
+		return cloud.AzureChina
+	default:
+		return cloud.AzurePublic
+	}
+}
+
+func (p *AzureAksCommandProvider) Resources(_ context.Context) []func() resource.Resource {
+	return []func() resource.Resource{
+		NewInvokeResource,
+	}
+}
+
+func (p *AzureAksCommandProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewExampleDataSource,
+		NewInvokeDataSource,
 	}
 }
 
@@ -310,7 +351,7 @@ func buildUserAgent(terraformVersion string, providerVersion string, partnerID s
 	}
 
 	tfUserAgent := fmt.Sprintf("HashiCorp Terraform/%s (+https://www.terraform.io) Terraform Plugin SDK/%s", terraformVersion, meta.SDKVersionString())
-	providerUserAgent := fmt.Sprintf("terraform-provider-azure-ak-scommand/%s", providerVersion)
+	providerUserAgent := fmt.Sprintf("terraform-provider-azure-aks-aad-token/%s", providerVersion)
 	userAgent := strings.TrimSpace(fmt.Sprintf("%s %s", tfUserAgent, providerUserAgent))
 
 	// append the CloudShell version to the user agent if it exists
@@ -322,4 +363,10 @@ func buildUserAgent(terraformVersion string, providerVersion string, partnerID s
 		userAgent = fmt.Sprintf("%s pid-%s", userAgent, partnerID)
 	}
 	return userAgent
+}
+
+func setEnvIfNotExists(envVarName string, value string) {
+	if v := os.Getenv(envVarName); v == "" && value != "" {
+		_ = os.Setenv(envVarName, value)
+	}
 }
