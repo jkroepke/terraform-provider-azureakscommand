@@ -25,7 +25,9 @@ func (r *InvokeResource) Metadata(_ context.Context, req resource.MetadataReques
 }
 
 func (r *InvokeResource) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	description := "A resource to managed a runCommand execution on a AKS"
+	description := "A resource to managed a runCommand execution on a AKS" +
+		"\n\n" +
+		"The `triggers` argument allows specifying an arbitrary set of values that, when changed, will cause the resource to be replaced."
 
 	return getSchema(description), nil
 }

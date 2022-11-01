@@ -16,6 +16,7 @@ type InvokeModel struct {
 	ResourceGroupName  types.String `tfsdk:"resource_group_name"`
 	Command            types.String `tfsdk:"command"`
 	Context            types.String `tfsdk:"context"`
+	Triggers           types.Map    `tfsdk:"triggers"`
 	ExitCode           types.Int64  `tfsdk:"exit_code"`
 	Output             types.String `tfsdk:"output"`
 	ProvisioningState  types.String `tfsdk:"provisioning_state"`
@@ -58,7 +59,7 @@ func getSchema(markdownDescription string) tfsdk.Schema {
 		Attributes: map[string]tfsdk.Attribute{
 			"name": {
 				Required:            true,
-				MarkdownDescription: "The name of the Managed Kubernetes Cluster to create. Changing this forces a new resource to be created.",
+				MarkdownDescription: "(String) The name of the Managed Kubernetes Cluster to create. Changing this forces a new resource to be created.",
 				Type:                types.StringType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.RequiresReplace(),
@@ -66,7 +67,7 @@ func getSchema(markdownDescription string) tfsdk.Schema {
 			},
 			"resource_group_name": {
 				Required:            true,
-				MarkdownDescription: "Specifies the Resource Group where the Managed Kubernetes Cluster should exist. Changing this forces a new resource to be created.",
+				MarkdownDescription: "(String) Specifies the Resource Group where the Managed Kubernetes Cluster should exist. Changing this forces a new resource to be created.",
 				Type:                types.StringType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.RequiresReplace(),
@@ -74,7 +75,7 @@ func getSchema(markdownDescription string) tfsdk.Schema {
 			},
 			"command": {
 				Required:            true,
-				MarkdownDescription: "The command to run.",
+				MarkdownDescription: "(String) The command to run.",
 				Type:                types.StringType,
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.RequiresReplace(),
@@ -82,15 +83,23 @@ func getSchema(markdownDescription string) tfsdk.Schema {
 			},
 			"context": {
 				Optional:            true,
-				MarkdownDescription: "A base64 encoded zip file containing the files required by the command.",
+				MarkdownDescription: "(String) A base64 encoded zip file containing the files required by the command.",
 				Type:                types.StringType,
+				PlanModifiers: tfsdk.AttributePlanModifiers{
+					resource.RequiresReplace(),
+				},
+			},
+			"triggers": {
+				Optional:            true,
+				MarkdownDescription: "(Map of String) A map of arbitrary strings that, when changed, will force the null resource to be replaced, re-running any associated provisioners.",
+				Type:                types.MapType{ElemType: types.StringType},
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.RequiresReplace(),
 				},
 			},
 			"id": {
 				Computed:            true,
-				MarkdownDescription: "The command id",
+				MarkdownDescription: "(String) The runCommand id",
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
 				},
@@ -98,7 +107,7 @@ func getSchema(markdownDescription string) tfsdk.Schema {
 			},
 			"exit_code": {
 				Computed:            true,
-				MarkdownDescription: "The exit code of the command",
+				MarkdownDescription: "(Integer) The exit code of the command",
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
 				},
@@ -106,7 +115,7 @@ func getSchema(markdownDescription string) tfsdk.Schema {
 			},
 			"output": {
 				Computed:            true,
-				MarkdownDescription: "The output of the command",
+				MarkdownDescription: "(String) The output of the command",
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
 				},
@@ -114,7 +123,7 @@ func getSchema(markdownDescription string) tfsdk.Schema {
 			},
 			"provisioning_state": {
 				Computed:            true,
-				MarkdownDescription: "provisioning State",
+				MarkdownDescription: "(String) provisioning state",
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
 				},
@@ -122,7 +131,7 @@ func getSchema(markdownDescription string) tfsdk.Schema {
 			},
 			"provisioning_reason": {
 				Computed:            true,
-				MarkdownDescription: "An explanation of why provisioningState is set to failed (if so).",
+				MarkdownDescription: "(String) An explanation of why provisioning_state is set to failed (if so).",
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
 				},
@@ -130,7 +139,7 @@ func getSchema(markdownDescription string) tfsdk.Schema {
 			},
 			"started_at": {
 				Computed:            true,
-				MarkdownDescription: "The time when the command started.",
+				MarkdownDescription: "(Integer) The time as unix timestamp when the command started.",
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
 				},
@@ -138,7 +147,7 @@ func getSchema(markdownDescription string) tfsdk.Schema {
 			},
 			"finished_at": {
 				Computed:            true,
-				MarkdownDescription: "The time when the command finished.",
+				MarkdownDescription: "(Integer) The time as unix timestamp when the command finished.",
 				PlanModifiers: tfsdk.AttributePlanModifiers{
 					resource.UseStateForUnknown(),
 				},
