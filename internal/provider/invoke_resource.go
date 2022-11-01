@@ -10,7 +10,6 @@ import (
 
 // Ensure provider defined types fully satisfy framework interfaces
 var _ resource.Resource = &InvokeResource{}
-var _ resource.ResourceWithImportState = &InvokeResource{}
 
 func NewInvokeResource() resource.Resource {
 	return &InvokeResource{}
@@ -110,17 +109,13 @@ func (r *InvokeResource) Read(ctx context.Context, req resource.ReadRequest, res
 func (r *InvokeResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data *InvokeModel
 
-	// Read Terraform plan data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-
-	resp.Diagnostics.AddError("Unsupported operation", "azureakscommand_invoke does not support update")
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.AddError("Unsupported operation", "azureakscommand_invoke does not support update")
 }
 
 func (r *InvokeResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -131,8 +126,4 @@ func (r *InvokeResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	if resp.Diagnostics.HasError() {
 		return
 	}
-}
-
-func (r *InvokeResource) ImportState(_ context.Context, _ resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resp.Diagnostics.AddError("Unsupported operation", "azureakscommand_invoke does not support import")
 }

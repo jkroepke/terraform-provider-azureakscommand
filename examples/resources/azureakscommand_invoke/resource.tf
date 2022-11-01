@@ -53,7 +53,7 @@ resource "azureakscommand_invoke" "this" {
 
 
 
-# helm is nativly supported.
+# helm is natively supported.
 resource "azureakscommand_invoke" "this" {
   resource_group_name = "rg-default"
   name                = "cluster-name"
