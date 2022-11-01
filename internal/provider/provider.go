@@ -13,6 +13,7 @@ import (
 	"github.com/jkroepke/terraform-provider-azure-aks-command/internal/clients"
 	"github.com/jkroepke/terraform-provider-azure-aks-command/internal/helpers"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -41,7 +42,6 @@ type AzureAksCommandProviderModel struct {
 	ClientId                  types.String `tfsdk:"client_id"`
 	TenantId                  types.String `tfsdk:"tenant_id"`
 	Environment               types.String `tfsdk:"environment"`
-	MetadataHost              types.String `tfsdk:"metadata_host"`
 	ClientCertificatePath     types.String `tfsdk:"client_certificate_path"`
 	ClientCertificatePassword types.String `tfsdk:"client_certificate_password"`
 	ClientSecret              types.String `tfsdk:"client_secret"`
@@ -53,11 +53,20 @@ type AzureAksCommandProviderModel struct {
 	UseMsi                    types.Bool   `tfsdk:"use_msi"`
 	MsiEndpoint               types.String `tfsdk:"msi_endpoint"`
 	PartnerId                 types.String `tfsdk:"partner_id"`
+	DisableTerraformPartnerId types.Bool   `tfsdk:"disable_terraform_partner_id"`
 }
 
 type AzureAksCommandClient struct {
 	cred   azcore.TokenCredential
 	client *armcontainerservice.ManagedClustersClient
+}
+
+func New(version string) func() provider.Provider {
+	return func() provider.Provider {
+		return &AzureAksCommandProvider{
+			version: version,
+		}
+	}
 }
 
 func (p *AzureAksCommandProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -67,146 +76,103 @@ func (p *AzureAksCommandProvider) Metadata(_ context.Context, _ provider.Metadat
 
 func (p *AzureAksCommandProvider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
-		Description: "A terraform provider to run commands inside AKS through Azure API. It doesn't require any connection to the AKS.\n\n" +
+		MarkdownDescription: "A terraform provider to run commands inside AKS through Azure API. It doesn't require any connection to the AKS." +
+			"\n\n" +
 			"See https://learn.microsoft.com/en-us/azure/aks/command-invoke for more information.",
+
 		Attributes: map[string]tfsdk.Attribute{
 			"subscription_id": {
-				Description: "The Subscription ID which should be used.",
-				Required:    true,
-				Type:        types.StringType,
-				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_SUBSCRIPTION_ID", "AZURE_SUBSCRIPTION_ID"}, DefaultValue: ""},
-				},
+				MarkdownDescription: "The Subscription ID which should be used. This can also be sourced from the `ARM_SUBSCRIPTION_ID` or `AZURE_SUBSCRIPTION_ID` Environment Variables.",
+				Optional:            true,
+				Type:                types.StringType,
 			},
 			"client_id": {
-				Description: "The Client ID which should be used.",
-				Optional:    true,
-				Type:        types.StringType,
-				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_CLIENT_ID"}, DefaultValue: ""},
-				},
+				MarkdownDescription: "The Client ID which should be used. This can also be sourced from the `ARM_CLIENT_ID` or `AZURE_CLIENT_ID` Environment Variables.",
+				Optional:            true,
+				Type:                types.StringType,
 			},
 			"tenant_id": {
-				Description: "The Tenant ID which should be used.",
-				Optional:    true,
-				Type:        types.StringType,
-				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_TENANT_ID"}, DefaultValue: ""},
-				},
+				MarkdownDescription: "The Tenant ID which should be used. This can also be sourced from the `ARM_TENANT_ID` or `AZURE_TENANT_ID` Environment Variables.",
+				Optional:            true,
+				Type:                types.StringType,
 			},
 			"environment": {
-				Description: "The Cloud Environment which should be used. Possible values are public, usgovernment, and china. Defaults to public.",
-				Optional:    true,
-				Type:        types.StringType,
-				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_ENVIRONMENT"}, DefaultValue: "public"},
-				},
-			},
-			"metadata_host": {
-				Description: "The Hostname which should be used for the Azure Metadata Service.",
-				Optional:    true,
-				Type:        types.StringType,
-				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_METADATA_HOSTNAME"}, DefaultValue: ""},
-				},
+				MarkdownDescription: "The Cloud Environment which should be used. Possible values are `public`, `usgovernment`, and `china`. Defaults to `public`. This can also be sourced from the `ARM_ENVIRONMENT` or `AZURE_ENVIRONMENT` Environment Variables.",
+				Optional:            true,
+				Type:                types.StringType,
 			},
 
 			// Client Certificate specific fields
 			"client_certificate_path": {
-				Description: "The path to the Client Certificate associated with the Service Principal for use when authenticating as a Service Principal using a Client Certificate.",
-				Optional:    true,
-				Type:        types.StringType,
-				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_CLIENT_CERTIFICATE_PATH"}, DefaultValue: ""},
-				},
+				MarkdownDescription: "The path to the Client Certificate associated with the Service Principal for use when authenticating as a Service Principal using a Client Certificate. This can also be sourced from the `ARM_CLIENT_CERTIFICATE_PATH` or `AZURE_CERTIFICATE_PATH` Environment Variables.",
+				Optional:            true,
+				Sensitive:           true,
+				Type:                types.StringType,
 			},
 			"client_certificate_password": {
-				Description: "The password associated with the Client Certificate. For use when authenticating as a Service Principal using a Client Certificate",
-				Optional:    true,
-				Type:        types.StringType,
-				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_CLIENT_CERTIFICATE_PASSWORD"}, DefaultValue: ""},
-				},
+				MarkdownDescription: "The password associated with the Client Certificate. For use when authenticating as a Service Principal using a Client Certificate. This can also be sourced from the `ARM_CLIENT_CERTIFICATE_PASSWORD` or `AZURE_CERTIFICATE_PASSWORD` Environment Variables.",
+				Optional:            true,
+				Sensitive:           true,
+				Type:                types.StringType,
 			},
 
 			// Client Secret specific fields
 			"client_secret": {
-				Description: "The Client Secret which should be used. For use When authenticating as a Service Principal using a Client Secret.",
-				Optional:    true,
-				Type:        types.StringType,
-				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_CLIENT_SECRET"}, DefaultValue: ""},
-				},
+				MarkdownDescription: "The Client Secret which should be used. For use When authenticating as a Service Principal using a Client Secret. This can also be sourced from the `ARM_CLIENT_SECRET` or `AZURE_CLIENT_SECRET` Environment Variables.",
+				Optional:            true,
+				Sensitive:           true,
+				Type:                types.StringType,
 			},
 
 			// OIDC specific fields
 			"oidc_request_token": {
-				Description: "The bearer token for the request to the OIDC provider. For use when authenticating as a Service Principal using OpenID Connect.",
-				Optional:    true,
-				Type:        types.StringType,
-				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_OIDC_REQUEST_TOKEN", "ACTIONS_ID_TOKEN_REQUEST_TOKEN"}, DefaultValue: ""},
-				},
+				MarkdownDescription: "The bearer token for the request to the OIDC provider. This can also be sourced from the `ARM_OIDC_REQUEST_TOKEN` or `ACTIONS_ID_TOKEN_REQUEST_TOKEN` Environment Variables.",
+				Optional:            true,
+				Type:                types.StringType,
 			},
 			"oidc_request_url": {
-				Description: "The URL for the OIDC provider from which to request an ID token. For use when authenticating as a Service Principal using OpenID Connect.",
-				Optional:    true,
-				Type:        types.StringType,
-				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_OIDC_REQUEST_URL", "ACTIONS_ID_TOKEN_REQUEST_URL"}, DefaultValue: ""},
-				},
+				MarkdownDescription: "The URL for the OIDC provider from which to request an ID token. This can also be sourced from the `ARM_OIDC_REQUEST_URL` or `ACTIONS_ID_TOKEN_REQUEST_URL` Environment Variables.",
+				Optional:            true,
+				Type:                types.StringType,
 			},
 			"oidc_token": {
-				Description: "The OIDC ID token for use when authenticating as a Service Principal using OpenID Connect.",
-				Optional:    true,
-				Type:        types.StringType,
-				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_OIDC_TOKEN"}, DefaultValue: ""},
-				},
+				MarkdownDescription: "The ID token when authenticating using OpenID Connect (OIDC). This can also be sourced from the `ARM_OIDC_TOKEN` environment Variable.",
+				Optional:            true,
+				Type:                types.StringType,
 			},
 			"oidc_token_file_path": {
-				Description: "The path to a file containing an OIDC ID token for use when authenticating as a Service Principal using OpenID Connect.",
-				Optional:    true,
-				Type:        types.StringType,
-				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_OIDC_TOKEN_FILE_PATH"}, DefaultValue: ""},
-				},
+				MarkdownDescription: "The path to a file containing an ID token when authenticating using OpenID Connect (OIDC). This can also be sourced from the `ARM_OIDC_TOKEN_FILE_PATH` or `AZURE_FEDERATED_TOKEN_FILE` environment Variable.",
+				Optional:            true,
+				Type:                types.StringType,
 			},
 			"use_oidc": {
-				Description: "Allow OpenID Connect to be used for authentication",
-				Optional:    true,
-				Type:        types.BoolType,
-				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_USE_OIDC"}, DefaultValue: false},
-				},
+				MarkdownDescription: "Should OIDC be used for Authentication? This can also be sourced from the `ARM_USE_OIDC` Environment Variable. Defaults to false.",
+				Optional:            true,
+				Type:                types.BoolType,
 			},
 
 			// Managed Service Identity specific fields
 			"use_msi": {
-				Description: "Allowed Managed Service Identity be used for Authentication.",
-				Type:        types.BoolType,
-				Optional:    true,
-				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_USE_MSI"}, DefaultValue: false},
-				},
+				MarkdownDescription: "Allowed Managed Service Identity be used for Authentication.",
+				Type:                types.BoolType,
+				Optional:            true,
 			},
 			"msi_endpoint": {
-				Description: "The path to a custom endpoint for Managed Service Identity - in most circumstances this should be detected automatically. ",
-				Type:        types.StringType,
-				Optional:    true,
-				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_MSI_ENDPOINT"}, DefaultValue: false},
-				},
+				MarkdownDescription: "The path to a custom endpoint for Managed Service Identity - in most circumstances, this should be detected automatically. This can also, be sourced from the `ARM_MSI_ENDPOINT` or `MSI_ENDPOINT` Environment Variable.",
+				Type:                types.StringType,
+				Optional:            true,
 			},
 
 			// Managed Tracking GUID for User-agent
 			"partner_id": {
-				Description: "A GUID/UUID that is registered with Microsoft to facilitate partner resource usage attribution.",
-				Type:        types.StringType,
-				Optional:    true,
-				PlanModifiers: []tfsdk.AttributePlanModifier{
-					helpers.EnvVarModifier{EnvVarNames: []string{"ARM_PARTNER_ID"}, DefaultValue: ""},
-				},
+				MarkdownDescription: "A GUID/UUID registered with Microsoft to facilitate partner resource usage attribution). This can also be sourced from the `ARM_PARTNER_ID` Environment Variable. Supported formats are `<guid>` / `pid-<guid>` (GUIDs registered in Partner Center) and `pid-<guid>-partnercenter` (for published [commercial marketplace Azure apps](https://docs.microsoft.com/azure/marketplace/azure-partner-customer-usage-attribution#commercial-marketplace-azure-apps)).",
+				Type:                types.StringType,
+				Optional:            true,
+			},
+			"disable_terraform_partner_id": {
+				MarkdownDescription: "Disable sending the Terraform Partner ID if a custom partner_id isn't specified, which allows Microsoft to better understand the usage of Terraform. The Partner ID does not give the author any direct access to usage information. This can also be sourced from the `ARM_DISABLE_TERRAFORM_PARTNER_ID` environment variable. Defaults to `false`.",
+				Type:                types.BoolType,
+				Optional:            true,
 			},
 		},
 	}, nil
@@ -221,18 +187,26 @@ func (p *AzureAksCommandProvider) Configure(ctx context.Context, req provider.Co
 		return
 	}
 
-	setEnvIfNotExists("AZURE_CLIENT_ID", data.ClientId.ValueString())
-	setEnvIfNotExists("AZURE_CLIENT_SECRET", data.ClientSecret.ValueString())
-	setEnvIfNotExists("AZURE_CERTIFICATE_PATH", data.ClientCertificatePath.ValueString())
-	setEnvIfNotExists("AZURE_CERTIFICATE_PASSWORD", data.ClientCertificatePassword.ValueString())
-	setEnvIfNotExists("AZURE_ENVIRONMENT", data.Environment.ValueString())
+	subscriptionId := getStringAttributeFromEnvironment(data.SubscriptionId, []string{"ARM_SUBSCRIPTION_ID", "AZURE_SUBSCRIPTION_ID"}, "")
+	tenantId := getStringAttributeFromEnvironment(data.TenantId, []string{"ARM_TENANT_ID", "AZURE_TENANT_ID"}, "")
 
-	if data.UseMsi.ValueBool() {
-		setEnvIfNotExists("MSI_ENDPOINT", data.MsiEndpoint.ValueString())
-	} else if data.UseOidc.ValueBool() {
-		var token string
+	setAttributeFromTerraformOrEnvironment(data.ClientId, "AZURE_CLIENT_ID", []string{"ARM_CLIENT_ID"}, "")
+	setAttributeFromTerraformOrEnvironment(data.ClientSecret, "AZURE_CLIENT_SECRET", []string{"ARM_CLIENT_SECRET"}, "")
+	setAttributeFromTerraformOrEnvironment(data.ClientCertificatePath, "AZURE_CERTIFICATE_PATH", []string{"ARM_CLIENT_CERTIFICATE_PATH"}, "")
+	setAttributeFromTerraformOrEnvironment(data.ClientCertificatePassword, "AZURE_CERTIFICATE_PASSWORD", []string{"ARM_CLIENT_CERTIFICATE_PASSWORD"}, "")
+	setAttributeFromTerraformOrEnvironment(data.Environment, "AZURE_ENVIRONMENT", []string{"ARM_ENVIRONMENT"}, "public")
 
-		if data.OidcRequestUrl.ValueString() != "" && data.OidcRequestToken.ValueString() != "" {
+	if getBooleanAttributeFromEnvironment(data.UseMsi, []string{"ARM_USE_MSI"}, false) {
+		setAttributeFromTerraformOrEnvironment(data.MsiEndpoint, "MSI_ENDPOINT", []string{"ARM_MSI_ENDPOINT"}, "")
+	} else if getBooleanAttributeFromEnvironment(data.UseOidc, []string{"ARM_USE_OIDC"}, false) {
+		setAttributeFromTerraformOrEnvironment(data.OidcTokenFilePath, "AZURE_FEDERATED_TOKEN_FILE", []string{"ARM_OIDC_TOKEN_FILE_PATH"}, "")
+
+		token := getStringAttributeFromEnvironment(data.OidcToken, []string{"ARM_OIDC_TOKEN"}, "")
+
+		oidcRequestUrl := getStringAttributeFromEnvironment(data.OidcRequestUrl, []string{"ARM_OIDC_REQUEST_URL", "ACTIONS_ID_TOKEN_REQUEST_URL"}, "")
+		oidcRequestToken := getStringAttributeFromEnvironment(data.OidcRequestToken, []string{"ARM_OIDC_REQUEST_TOKEN", "ACTIONS_ID_TOKEN_REQUEST_TOKEN"}, "")
+
+		if token != "" && oidcRequestUrl != "" && oidcRequestToken != "" {
 			var err error
 
 			token, err = helpers.GetOidcTokenFromGithubActions(data.OidcRequestUrl.ValueString(), data.OidcRequestToken.ValueString())
@@ -240,20 +214,18 @@ func (p *AzureAksCommandProvider) Configure(ctx context.Context, req provider.Co
 				resp.Diagnostics.AddError("Error while request token from GH API", err.Error())
 				return
 			}
-		} else if data.OidcToken.ValueString() != "" {
-			token = data.OidcToken.ValueString()
 		}
 
 		if token != "" {
 			f, err := os.CreateTemp("", "token*")
 			if err != nil {
-				resp.Diagnostics.AddError("Error while request token from GH API", err.Error())
+				resp.Diagnostics.AddError("Error while setup OIDC token file", err.Error())
 				return
 			}
 
-			_, err = f.WriteString(data.OidcToken.ValueString())
+			_, err = f.WriteString(token)
 			if err != nil {
-				resp.Diagnostics.AddError("Error while request token from GH API", err.Error())
+				resp.Diagnostics.AddError("Error while setup OIDC token file", err.Error())
 				return
 			}
 
@@ -262,16 +234,17 @@ func (p *AzureAksCommandProvider) Configure(ctx context.Context, req provider.Co
 			defer func(name string) {
 				_ = os.Remove(name)
 			}(f.Name())
-		} else {
-			_ = os.Setenv("AZURE_FEDERATED_TOKEN_FILE", data.OidcTokenFilePath.ValueString())
 		}
 	}
 
-	userAgent := buildUserAgent(req.TerraformVersion, p.version, data.PartnerId.ValueString())
+	partnerId := getStringAttributeFromEnvironment(data.PartnerId, []string{"ARM_PARTNER_ID"}, "")
+	disableTerraformPartnerId := getBooleanAttributeFromEnvironment(data.UseMsi, []string{"ARM_DISABLE_TERRAFORM_PARTNER_ID"}, false)
+
+	userAgent := buildUserAgent(req.TerraformVersion, p.version, disableTerraformPartnerId, partnerId)
 
 	cred, err := helpers.NewAzureCredential(
 		&azidentity.DefaultAzureCredentialOptions{
-			TenantID: data.TenantId.ValueString(),
+			TenantID: tenantId,
 			ClientOptions: azcore.ClientOptions{
 				Cloud: p.getCloudConfig(data),
 				PerCallPolicies: []policy.Policy{
@@ -286,7 +259,7 @@ func (p *AzureAksCommandProvider) Configure(ctx context.Context, req provider.Co
 		return
 	}
 
-	client, err := armcontainerservice.NewManagedClustersClient(data.SubscriptionId.ValueString(), cred, &arm.ClientOptions{
+	client, err := armcontainerservice.NewManagedClustersClient(subscriptionId, cred, &arm.ClientOptions{
 		ClientOptions: azcore.ClientOptions{
 			Cloud: p.getCloudConfig(data),
 			PerCallPolicies: []policy.Policy{
@@ -310,6 +283,18 @@ func (p *AzureAksCommandProvider) Configure(ctx context.Context, req provider.Co
 	}
 }
 
+func (p *AzureAksCommandProvider) Resources(_ context.Context) []func() resource.Resource {
+	return []func() resource.Resource{
+		NewInvokeResource,
+	}
+}
+
+func (p *AzureAksCommandProvider) DataSources(_ context.Context) []func() datasource.DataSource {
+	return []func() datasource.DataSource{
+		NewInvokeDataSource,
+	}
+}
+
 func (p *AzureAksCommandProvider) getCloudConfig(data AzureAksCommandProviderModel) cloud.Configuration {
 	switch data.Environment.ValueString() {
 	case "public":
@@ -323,30 +308,10 @@ func (p *AzureAksCommandProvider) getCloudConfig(data AzureAksCommandProviderMod
 	}
 }
 
-func (p *AzureAksCommandProvider) Resources(_ context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
-		NewInvokeResource,
-	}
-}
-
-func (p *AzureAksCommandProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{
-		NewInvokeDataSource,
-	}
-}
-
-func New(version string) func() provider.Provider {
-	return func() provider.Provider {
-		return &AzureAksCommandProvider{
-			version: version,
-		}
-	}
-}
-
-func buildUserAgent(terraformVersion string, providerVersion string, partnerID string) string {
+func buildUserAgent(terraformVersion string, providerVersion string, disableTerraformPartnerId bool, partnerID string) string {
 	if terraformVersion == "" {
 		// Terraform 0.12 introduced this field to the protocol
-		// We can therefore assume that if it's missing it's 0.10 or 0.11
+		// We can therefore assume that if it's missing its 0.10 or 0.11
 		terraformVersion = "0.11+compatible"
 	}
 
@@ -359,14 +324,45 @@ func buildUserAgent(terraformVersion string, providerVersion string, partnerID s
 		userAgent = fmt.Sprintf("%s %s", userAgent, azureAgent)
 	}
 
-	if partnerID != "" {
+	if disableTerraformPartnerId && partnerID != "" {
 		userAgent = fmt.Sprintf("%s pid-%s", userAgent, partnerID)
 	}
 	return userAgent
 }
 
-func setEnvIfNotExists(envVarName string, value string) {
-	if v := os.Getenv(envVarName); v == "" && value != "" {
-		_ = os.Setenv(envVarName, value)
+func setAttributeFromTerraformOrEnvironment(value types.String, envVar string, envVarNames []string, defaultValue string) {
+	configValue := getStringAttributeFromEnvironment(value, envVarNames, defaultValue)
+
+	if configValue != "" {
+		_ = os.Setenv(envVar, configValue)
 	}
+}
+
+func getStringAttributeFromEnvironment(value types.String, envVarNames []string, defaultValue string) string {
+	if !value.IsNull() {
+		return value.ValueString()
+	}
+
+	for _, k := range envVarNames {
+		if v := os.Getenv(k); v != "" {
+			return v
+		}
+	}
+
+	return defaultValue
+}
+func getBooleanAttributeFromEnvironment(value types.Bool, envVarNames []string, defaultValue bool) bool {
+	if !value.IsNull() {
+		return value.ValueBool()
+	}
+
+	for _, k := range envVarNames {
+		if v := os.Getenv(k); v != "" {
+			if val, err := strconv.ParseBool(v); err == nil {
+				return val
+			}
+		}
+	}
+
+	return defaultValue
 }
