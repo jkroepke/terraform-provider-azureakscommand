@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"strings"
 )
 
 // InvokeModel describes the resource data model.
@@ -29,7 +30,15 @@ func runCommand(ctx context.Context, client AzureAksCommandClient, resourceGroup
 	token, err := client.cred.GetToken(ctx, policy.TokenRequestOptions{Scopes: []string{"6dae42f8-4368-4678-94ff-3960e28e3630"}})
 
 	if err != nil {
-		return nil, err
+		if !strings.Contains(err.Error(), "AADSTS1002012") {
+			return nil, err
+		}
+
+		token, err = client.cred.GetToken(ctx, policy.TokenRequestOptions{Scopes: []string{"6dae42f8-4368-4678-94ff-3960e28e3630/.default"}})
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	payload := armcontainerservice.RunCommandRequest{

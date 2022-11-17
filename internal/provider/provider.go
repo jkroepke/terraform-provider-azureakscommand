@@ -189,8 +189,13 @@ func (p *AzureAksCommandProvider) Configure(ctx context.Context, req provider.Co
 	}
 
 	subscriptionId := getStringAttributeFromEnvironment(data.SubscriptionId, []string{"ARM_SUBSCRIPTION_ID", "AZURE_SUBSCRIPTION_ID"}, "")
-	tenantId := getStringAttributeFromEnvironment(data.TenantId, []string{"ARM_TENANT_ID", "AZURE_TENANT_ID"}, "")
 
+	if subscriptionId == "" {
+		resp.Diagnostics.AddError("Missing subscription_id", "Could not dectect subscription id through ARM_SUBSCRIPTION_ID, AZURE_SUBSCRIPTION_ID or provider attribute.")
+		return
+	}
+
+	setAttributeFromTerraformOrEnvironment(data.TenantId, "AZURE_TENANT_ID", []string{"ARM_TENANT_ID", "AZURE_TENANT_ID"}, "")
 	setAttributeFromTerraformOrEnvironment(data.ClientId, "AZURE_CLIENT_ID", []string{"ARM_CLIENT_ID"}, "")
 	setAttributeFromTerraformOrEnvironment(data.ClientSecret, "AZURE_CLIENT_SECRET", []string{"ARM_CLIENT_SECRET"}, "")
 	setAttributeFromTerraformOrEnvironment(data.ClientCertificatePath, "AZURE_CERTIFICATE_PATH", []string{"ARM_CLIENT_CERTIFICATE_PATH"}, "")
@@ -245,7 +250,6 @@ func (p *AzureAksCommandProvider) Configure(ctx context.Context, req provider.Co
 
 	cred, err := helpers.NewAzureCredential(
 		&azidentity.DefaultAzureCredentialOptions{
-			TenantID: tenantId,
 			ClientOptions: azcore.ClientOptions{
 				Cloud: p.getCloudConfig(data),
 				PerCallPolicies: []policy.Policy{
