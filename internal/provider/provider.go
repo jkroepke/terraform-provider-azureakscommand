@@ -9,6 +9,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v2"
+	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/meta"
 	"github.com/jkroepke/terraform-provider-azure-aks-command/internal/clients"
 	"github.com/jkroepke/terraform-provider-azure-aks-command/internal/helpers"
@@ -17,16 +18,13 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 // Ensure AzureAksCommandProvider satisfies various provider interfaces.
 var _ provider.Provider = &AzureAksCommandProvider{}
-var _ provider.ProviderWithMetadata = &AzureAksCommandProvider{}
 
 // AzureAksCommandProvider defines the provider implementation.
 type AzureAksCommandProvider struct {
@@ -68,115 +66,98 @@ func New(version string) func() provider.Provider {
 		}
 	}
 }
-
 func (p *AzureAksCommandProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "azureakscommand"
 	resp.Version = p.version
 }
 
-func (p *AzureAksCommandProvider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfsdk.Schema{
+func (p *AzureAksCommandProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
+	resp.Schema = schema.Schema{
 		MarkdownDescription: "A terraform provider to run commands inside AKS through Azure API. It doesn't require any connection to the AKS." +
 			"\n\n" +
 			"See https://learn.microsoft.com/en-us/azure/aks/command-invoke for more information.",
 
-		Attributes: map[string]tfsdk.Attribute{
-			"subscription_id": {
+		Attributes: map[string]schema.Attribute{
+			"subscription_id": schema.StringAttribute{
 				MarkdownDescription: "The Subscription ID which should be used. This can also be sourced from the `ARM_SUBSCRIPTION_ID` or `AZURE_SUBSCRIPTION_ID` Environment Variables.",
 				Optional:            true,
-				Type:                types.StringType,
 			},
-			"client_id": {
+			"client_id": schema.StringAttribute{
 				MarkdownDescription: "The Client ID which should be used. This can also be sourced from the `ARM_CLIENT_ID` or `AZURE_CLIENT_ID` Environment Variables.",
 				Optional:            true,
-				Type:                types.StringType,
 			},
-			"tenant_id": {
+			"tenant_id": schema.StringAttribute{
 				MarkdownDescription: "The Tenant ID which should be used. This can also be sourced from the `ARM_TENANT_ID` or `AZURE_TENANT_ID` Environment Variables.",
 				Optional:            true,
-				Type:                types.StringType,
 			},
-			"environment": {
+			"environment": schema.StringAttribute{
 				MarkdownDescription: "The Cloud Environment which should be used. Possible values are `public`, `usgovernment`, and `china`. Defaults to `public`. This can also be sourced from the `ARM_ENVIRONMENT` or `AZURE_ENVIRONMENT` Environment Variables.",
 				Optional:            true,
-				Type:                types.StringType,
 			},
 
 			// Client Certificate specific fields
-			"client_certificate_path": {
+			"client_certificate_path": schema.StringAttribute{
 				MarkdownDescription: "The path to the Client Certificate associated with the Service Principal for use when authenticating as a Service Principal using a Client Certificate. This can also be sourced from the `ARM_CLIENT_CERTIFICATE_PATH` or `AZURE_CERTIFICATE_PATH` Environment Variables.",
 				Optional:            true,
 				Sensitive:           true,
-				Type:                types.StringType,
 			},
-			"client_certificate_password": {
+			"client_certificate_password": schema.StringAttribute{
 				MarkdownDescription: "The password associated with the Client Certificate. For use when authenticating as a Service Principal using a Client Certificate. This can also be sourced from the `ARM_CLIENT_CERTIFICATE_PASSWORD` or `AZURE_CERTIFICATE_PASSWORD` Environment Variables.",
 				Optional:            true,
 				Sensitive:           true,
-				Type:                types.StringType,
 			},
 
 			// Client Secret specific fields
-			"client_secret": {
+			"client_secret": schema.StringAttribute{
 				MarkdownDescription: "The Client Secret which should be used. For use When authenticating as a Service Principal using a Client Secret. This can also be sourced from the `ARM_CLIENT_SECRET` or `AZURE_CLIENT_SECRET` Environment Variables.",
 				Optional:            true,
 				Sensitive:           true,
-				Type:                types.StringType,
 			},
 
 			// OIDC specific fields
-			"oidc_request_token": {
+			"oidc_request_token": schema.StringAttribute{
 				MarkdownDescription: "The bearer token for the request to the OIDC provider. This can also be sourced from the `ARM_OIDC_REQUEST_TOKEN` or `ACTIONS_ID_TOKEN_REQUEST_TOKEN` Environment Variables.",
 				Optional:            true,
-				Type:                types.StringType,
 			},
-			"oidc_request_url": {
+			"oidc_request_url": schema.StringAttribute{
 				MarkdownDescription: "The URL for the OIDC provider from which to request an ID token. This can also be sourced from the `ARM_OIDC_REQUEST_URL` or `ACTIONS_ID_TOKEN_REQUEST_URL` Environment Variables.",
 				Optional:            true,
-				Type:                types.StringType,
 			},
-			"oidc_token": {
+			"oidc_token": schema.StringAttribute{
 				MarkdownDescription: "The ID token when authenticating using OpenID Connect (OIDC). This can also be sourced from the `ARM_OIDC_TOKEN` environment Variable.",
 				Optional:            true,
 				Sensitive:           true,
-				Type:                types.StringType,
 			},
-			"oidc_token_file_path": {
+			"oidc_token_file_path": schema.StringAttribute{
 				MarkdownDescription: "The path to a file containing an ID token when authenticating using OpenID Connect (OIDC). This can also be sourced from the `ARM_OIDC_TOKEN_FILE_PATH` or `AZURE_FEDERATED_TOKEN_FILE` environment Variable.",
 				Optional:            true,
-				Type:                types.StringType,
 			},
-			"use_oidc": {
+			"use_oidc": schema.BoolAttribute{
 				MarkdownDescription: "Should OIDC be used for Authentication? This can also be sourced from the `ARM_USE_OIDC` Environment Variable. Defaults to `false`.",
 				Optional:            true,
-				Type:                types.BoolType,
 			},
 
 			// Managed Service Identity specific fields
-			"use_msi": {
+			"use_msi": schema.BoolAttribute{
 				MarkdownDescription: "Allowed Managed Service Identity be used for Authentication.",
-				Type:                types.BoolType,
 				Optional:            true,
 			},
-			"msi_endpoint": {
+			"msi_endpoint": schema.StringAttribute{
 				MarkdownDescription: "The path to a custom endpoint for Managed Service Identity - in most circumstances, this should be detected automatically. This can also, be sourced from the `ARM_MSI_ENDPOINT` or `MSI_ENDPOINT` Environment Variable.",
-				Type:                types.StringType,
 				Optional:            true,
 			},
 
 			// Managed Tracking GUID for User-agent
-			"partner_id": {
+			"partner_id": schema.StringAttribute{
 				MarkdownDescription: "A GUID/UUID registered with Microsoft to facilitate partner resource usage attribution). This can also be sourced from the `ARM_PARTNER_ID` Environment Variable. Supported formats are `<guid>` / `pid-<guid>` (GUIDs registered in Partner Center) and `pid-<guid>-partnercenter` (for published [commercial marketplace Azure apps](https://docs.microsoft.com/azure/marketplace/azure-partner-customer-usage-attribution#commercial-marketplace-azure-apps)).",
-				Type:                types.StringType,
 				Optional:            true,
 			},
-			"disable_terraform_partner_id": {
+			"disable_terraform_partner_id": schema.BoolAttribute{
 				MarkdownDescription: "Disable sending the Terraform Partner ID if a custom partner_id isn't specified, which allows Microsoft to better understand the usage of Terraform. The Partner ID does not give the author any direct access to usage information. This can also be sourced from the `ARM_DISABLE_TERRAFORM_PARTNER_ID` environment variable. Defaults to `false`.",
-				Type:                types.BoolType,
 				Optional:            true,
 			},
 		},
-	}, nil
+	}
 }
 
 func (p *AzureAksCommandProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {

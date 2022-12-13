@@ -4,8 +4,6 @@ import (
 	"context"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v2"
-	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"strings"
 )
@@ -58,112 +56,6 @@ func runCommand(ctx context.Context, client AzureAksCommandClient, resourceGroup
 	}
 
 	return &runCommand, nil
-}
-
-func getSchema(markdownDescription string) tfsdk.Schema {
-	return tfsdk.Schema{
-		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: markdownDescription,
-		Version:             1,
-		Attributes: map[string]tfsdk.Attribute{
-			"name": {
-				Required:            true,
-				MarkdownDescription: "The name of the Managed Kubernetes Cluster to create. Changing this forces a new resource to be created.",
-				Type:                types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.RequiresReplace(),
-				},
-			},
-			"resource_group_name": {
-				Required:            true,
-				MarkdownDescription: "Specifies the Resource Group where the Managed Kubernetes Cluster should exist. Changing this forces a new resource to be created.",
-				Type:                types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.RequiresReplace(),
-				},
-			},
-			"command": {
-				Required:            true,
-				MarkdownDescription: "The command to run.",
-				Type:                types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.RequiresReplace(),
-				},
-			},
-			"context": {
-				Optional:            true,
-				MarkdownDescription: "A base64 encoded zip file containing the files required by the command.",
-				Type:                types.StringType,
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.RequiresReplace(),
-				},
-			},
-			"triggers": {
-				Optional:            true,
-				MarkdownDescription: "A map of arbitrary strings that, when changed, will force the null resource to be replaced, re-running any associated provisioners.",
-				Type:                types.MapType{ElemType: types.StringType},
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.RequiresReplace(),
-				},
-			},
-			"id": {
-				Computed:            true,
-				MarkdownDescription: "The runCommand id",
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.UseStateForUnknown(),
-				},
-				Type: types.StringType,
-			},
-			"exit_code": {
-				Computed:            true,
-				MarkdownDescription: "The exit code of the command",
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.UseStateForUnknown(),
-				},
-				Type: types.Int64Type,
-			},
-			"output": {
-				Computed:            true,
-				MarkdownDescription: "The output of the command",
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.UseStateForUnknown(),
-				},
-				Type: types.StringType,
-			},
-			"provisioning_state": {
-				Computed:            true,
-				MarkdownDescription: "provisioning state",
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.UseStateForUnknown(),
-				},
-				Type: types.StringType,
-			},
-			"provisioning_reason": {
-				Computed:            true,
-				MarkdownDescription: "An explanation of why provisioning_state is set to failed (if so).",
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.UseStateForUnknown(),
-				},
-				Type: types.StringType,
-			},
-			"started_at": {
-				Computed:            true,
-				MarkdownDescription: "The time as unix timestamp when the command started.",
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.UseStateForUnknown(),
-				},
-				Type: types.Int64Type,
-			},
-			"finished_at": {
-				Computed:            true,
-				MarkdownDescription: "The time as unix timestamp when the command finished.",
-				PlanModifiers: tfsdk.AttributePlanModifiers{
-					resource.UseStateForUnknown(),
-				},
-				Type: types.Int64Type,
-			},
-		},
-	}
 }
 
 func processRunCommand(runCommand *armcontainerservice.ManagedClustersClientRunCommandResponse, data *InvokeModel) {
