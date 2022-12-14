@@ -10,7 +10,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v2"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/meta"
 	"github.com/jkroepke/terraform-provider-azure-aks-command/internal/clients"
 	"github.com/jkroepke/terraform-provider-azure-aks-command/internal/helpers"
 	"os"
@@ -301,7 +300,7 @@ func buildUserAgent(terraformVersion string, providerVersion string, disableTerr
 		terraformVersion = "0.11+compatible"
 	}
 
-	tfUserAgent := fmt.Sprintf("HashiCorp Terraform/%s (+https://www.terraform.io) Terraform Plugin SDK/%s", terraformVersion, meta.SDKVersionString())
+	tfUserAgent := fmt.Sprintf("HashiCorp Terraform/%s (+https://www.terraform.io)", terraformVersion)
 	providerUserAgent := fmt.Sprintf("terraform-provider-azure-aks-aad-token/%s", providerVersion)
 	userAgent := strings.TrimSpace(fmt.Sprintf("%s %s", tfUserAgent, providerUserAgent))
 
