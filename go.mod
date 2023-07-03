@@ -8,7 +8,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v2 v2.4.0
 	github.com/hashicorp/terraform-plugin-docs v0.15.0
 	github.com/hashicorp/terraform-plugin-framework v1.3.2
-	github.com/hashicorp/terraform-plugin-go v0.17.0
+	github.com/hashicorp/terraform-plugin-go v0.18.0
 )
 
 require (
