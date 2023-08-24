@@ -3,18 +3,19 @@ package provider
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v2"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v4"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/jkroepke/terraform-provider-azure-aks-command/internal/clients"
 	"github.com/jkroepke/terraform-provider-azure-aks-command/internal/helpers"
-	"os"
-	"strconv"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -228,7 +229,7 @@ func (p *AzureAksCommandProvider) Configure(ctx context.Context, req provider.Co
 
 	userAgent := buildUserAgent(req.TerraformVersion, p.version, disableTerraformPartnerId, partnerId)
 
-	cred, err := helpers.NewAzureCredential(
+	cred, err := azidentity.NewDefaultAzureCredential(
 		&azidentity.DefaultAzureCredentialOptions{
 			ClientOptions: azcore.ClientOptions{
 				Cloud: p.getCloudConfig(data),
