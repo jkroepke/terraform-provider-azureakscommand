@@ -125,5 +125,3 @@ resource "azureakscommand_invoke" "example" {
 - `provisioning_reason` (String) An explanation of why provisioning_state is set to failed (if so).
 - `provisioning_state` (String) provisioning state
 - `started_at` (Number) The time as unix timestamp when the command started.
-
-

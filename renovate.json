@@ -3,5 +3,5 @@
   "extends": [
     "config:base"
   ],
-  "postUpdateOptions": ["gomodTidy"]
+  "postUpdateOptions": ["gomodUpdateImportPaths","gomodTidy"]
 }
