@@ -3,3 +3,5 @@ dist/
 .terraform
 *terraform.tfstate*
 examples/test
+
+terraform-provider-azure-aks-command
