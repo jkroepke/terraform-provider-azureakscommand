@@ -19,7 +19,7 @@ permissions:
 env:
   # Go language version to use for building. This value should also be updated
   # in the release workflow if changed.
-  GO_VERSION: '1.19'
+  GO_VERSION: '1.21'
 
 jobs:
   # Ensure project builds before running testing matrix
@@ -60,7 +60,7 @@ jobs:
         # list whatever Terraform versions here you would like to support
         terraform:
           - '1.0.*'
-          - '1.1.*'
+          - '1.5.*'
     steps:
       - uses: actions/setup-go@v4
         with:
