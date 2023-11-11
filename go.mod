@@ -1,4 +1,4 @@
-module github.com/jkroepke/terraform-provider-azure-aks-command
+module github.com/jkroepke/terraform-provider-azureakscommand
 
 go 1.21
 

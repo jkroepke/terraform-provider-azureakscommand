@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/jkroepke/terraform-provider-azure-aks-command/internal/provider"
+	"github.com/jkroepke/terraform-provider-azureakscommand/internal/provider"
 )
 
 // Run "go generate" to format example terraform files and generate the docs for the registry/website

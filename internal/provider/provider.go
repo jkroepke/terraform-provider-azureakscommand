@@ -14,8 +14,8 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v4"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
-	"github.com/jkroepke/terraform-provider-azure-aks-command/internal/clients"
-	"github.com/jkroepke/terraform-provider-azure-aks-command/internal/helpers"
+	"github.com/jkroepke/terraform-provider-azureakscommand/internal/clients"
+	"github.com/jkroepke/terraform-provider-azureakscommand/internal/helpers"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
