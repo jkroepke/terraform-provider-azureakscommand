@@ -3,5 +3,6 @@
   "extends": [
     "config:base"
   ],
-  "postUpdateOptions": ["gomodUpdateImportPaths","gomodTidy"]
+  "postUpdateOptions": ["gomodUpdateImportPaths","gomodTidy"],
+  "dependencyDashboardApproval": true
 }
