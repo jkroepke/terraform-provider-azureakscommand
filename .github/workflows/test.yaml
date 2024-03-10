@@ -60,7 +60,7 @@ jobs:
         # list whatever Terraform versions here you would like to support
         terraform:
           - '1.0.*'
-          - '1.6.*'
+          - '1.7.*'
     steps:
       - uses: actions/setup-go@v5
         with:
