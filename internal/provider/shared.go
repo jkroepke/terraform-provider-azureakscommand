@@ -26,24 +26,28 @@ type InvokeModel struct {
 }
 
 func runCommand(ctx context.Context, client AzureAksCommandClient, resourceGroup string, resourceName string, command string, commandContext string) (*armcontainerservice.ManagedClustersClientRunCommandResponse, error) {
-	token, err := client.cred.GetToken(ctx, policy.TokenRequestOptions{Scopes: []string{"6dae42f8-4368-4678-94ff-3960e28e3630"}})
-
-	if err != nil {
-		if !strings.Contains(err.Error(), "AADSTS1002012") {
-			return nil, err
-		}
-
-		token, err = client.cred.GetToken(ctx, policy.TokenRequestOptions{Scopes: []string{"6dae42f8-4368-4678-94ff-3960e28e3630/.default"}})
-
-		if err != nil {
-			return nil, err
-		}
+	payload := armcontainerservice.RunCommandRequest{
+		Command: &command,
+		Context: &commandContext,
 	}
 
-	payload := armcontainerservice.RunCommandRequest{
-		Command:      &command,
-		ClusterToken: &token.Token,
-		Context:      &commandContext,
+	res, err := client.client.Get(ctx, resourceGroup, resourceName, nil)
+	if *res.Properties.AADProfile.Managed {
+		token, err := client.cred.GetToken(ctx, policy.TokenRequestOptions{Scopes: []string{"6dae42f8-4368-4678-94ff-3960e28e3630"}})
+
+		if err != nil {
+			if !strings.Contains(err.Error(), "AADSTS1002012") {
+				return nil, err
+			}
+
+			token, err = client.cred.GetToken(ctx, policy.TokenRequestOptions{Scopes: []string{"6dae42f8-4368-4678-94ff-3960e28e3630/.default"}})
+
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		payload.ClusterToken = &token.Token
 	}
 
 	poller, err := client.client.BeginRunCommand(ctx, resourceGroup, resourceName, payload, nil)
