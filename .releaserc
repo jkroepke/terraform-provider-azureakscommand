@@ -1,0 +1,21 @@
+{
+  branches: ['main'],
+  plugins: [
+    [
+      '@semantic-release/commit-analyzer',
+      {
+        preset: 'angular',
+        releaseRules: [{ type: 'chore', scope: 'deps', release: 'patch' },{ type: 'chore', scope: 'fix', release: 'patch' }]
+      }
+    ],
+    [
+      '@semantic-release/github',
+      {
+        successCommentCondition: false,
+        failCommentCondition: false,
+        labels: false,
+        addReleases: false
+      }
+    ]
+  ]
+}
