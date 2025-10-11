@@ -1,0 +1,26 @@
+name: Regenerate release notes
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+jobs:
+  regenerate:
+    if: github.repository_owner == 'jkroepke'
+    name: 'regenerate'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Update notes
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            NEW_NOTES=$(gh api --method POST -H "Accept: application/vnd.github+json" /repos/${{ github.repository }}/releases/generate-notes  -f tag_name=${{ github.ref_name }} | jq -r '.body')
+            RELEASE_ID=$(gh api -H "Accept: application/vnd.github+json" /repos/${{ github.repository }}/releases/tags/${{ github.ref_name }} | jq -r '.id')
+            gh api --method PATCH -H "Accept: application/vnd.github+json" "/repos/${{ github.repository }}/releases/$RELEASE_ID" -f "body=$NEW_NOTES"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
