@@ -19,23 +19,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
-      - uses: actions/checkout@v4
       - run: go mod download
       - run: go build -v .
 
   generate:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
-      - uses: actions/checkout@v4
       - run: go generate ./...
       - name: git diff
         run: |
@@ -57,6 +57,7 @@ jobs:
           - '1.7.*'
           - '1.12.*'
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
@@ -64,7 +65,6 @@ jobs:
         with:
           terraform_version: ${{ matrix.terraform }}
           terraform_wrapper: false
-      - uses: actions/checkout@v4
       - run: go mod download
       - env:
           TF_ACC: "1"
