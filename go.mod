@@ -62,7 +62,7 @@ require (
 	github.com/spf13/cast v1.5.1 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	github.com/yuin/goldmark v1.7.0 // indirect
+	github.com/yuin/goldmark v1.7.13 // indirect
 	github.com/yuin/goldmark-meta v1.1.0 // indirect
 	github.com/zclconf/go-cty v1.14.1 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
