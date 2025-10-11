@@ -34,8 +34,7 @@ jobs:
           node-version-file: package.json
 
       - run: |
-          npm ci
-          npm run all
+          make all
 
       - name: Commit changes
         env:
