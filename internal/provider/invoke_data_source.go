@@ -111,7 +111,7 @@ func (d *InvokeDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
 	// Prevent panic if the provider has not been configured.
-	if d.data.client == nil || d.data.cred == nil {
+	if d.data.managedClustersClient == nil || d.data.tokenCredential == nil {
 		resp.Diagnostics.AddError(
 			"Unconfigured Client",
 			"Expected configured client. Please report this issue to the provider developers.",

@@ -155,7 +155,7 @@ func (r *InvokeResource) Create(ctx context.Context, req resource.CreateRequest,
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
 	// Prevent panic if the provider has not been configured.
-	if r.data.client == nil || r.data.cred == nil {
+	if r.data.managedClustersClient == nil || r.data.tokenCredential == nil {
 		resp.Diagnostics.AddError(
 			"Unconfigured Client",
 			"Expected configured client. Please report this issue to the provider developers.",
@@ -189,7 +189,7 @@ func (r *InvokeResource) Read(ctx context.Context, req resource.ReadRequest, res
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 
 	// Prevent panic if the provider has not been configured.
-	if r.data.client == nil || r.data.cred == nil {
+	if r.data.managedClustersClient == nil || r.data.tokenCredential == nil {
 		resp.Diagnostics.AddError(
 			"Unconfigured Client",
 			"Expected configured client. Please report this issue to the provider developers.",

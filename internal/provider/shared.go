@@ -2,10 +2,11 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v4"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v7"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -31,16 +32,20 @@ func runCommand(ctx context.Context, client AzureAksCommandClient, resourceGroup
 		Context: &commandContext,
 	}
 
-	res, err := client.client.Get(ctx, resourceGroup, resourceName, nil)
+	res, err := client.managedClustersClient.Get(ctx, resourceGroup, resourceName, nil)
+	if err != nil {
+		return nil, fmt.Errorf("retrieving Managed Cluster %q (Resource Group %q): %w", resourceName, resourceGroup, err)
+	}
+
 	if *res.Properties.AADProfile.Managed {
-		token, err := client.cred.GetToken(ctx, policy.TokenRequestOptions{Scopes: []string{"6dae42f8-4368-4678-94ff-3960e28e3630"}})
+		token, err := client.tokenCredential.GetToken(ctx, policy.TokenRequestOptions{Scopes: []string{"6dae42f8-4368-4678-94ff-3960e28e3630"}})
 
 		if err != nil {
 			if !strings.Contains(err.Error(), "AADSTS1002012") {
 				return nil, err
 			}
 
-			token, err = client.cred.GetToken(ctx, policy.TokenRequestOptions{Scopes: []string{"6dae42f8-4368-4678-94ff-3960e28e3630/.default"}})
+			token, err = client.tokenCredential.GetToken(ctx, policy.TokenRequestOptions{Scopes: []string{"6dae42f8-4368-4678-94ff-3960e28e3630/.default"}})
 
 			if err != nil {
 				return nil, err
@@ -50,17 +55,17 @@ func runCommand(ctx context.Context, client AzureAksCommandClient, resourceGroup
 		payload.ClusterToken = &token.Token
 	}
 
-	poller, err := client.client.BeginRunCommand(ctx, resourceGroup, resourceName, payload, nil)
+	poller, err := client.managedClustersClient.BeginRunCommand(ctx, resourceGroup, resourceName, payload, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	runCommand, err := poller.PollUntilDone(ctx, nil)
+	runCommandPoller, err := poller.PollUntilDone(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return &runCommand, nil
+	return &runCommandPoller, nil
 }
 
 func processRunCommand(runCommand *armcontainerservice.ManagedClustersClientRunCommandResponse, data *InvokeModel) {
