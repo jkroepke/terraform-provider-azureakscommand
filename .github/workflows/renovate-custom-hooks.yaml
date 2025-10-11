@@ -1,0 +1,111 @@
+name: renovate hooks
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/*'
+      - 'package.json'
+      - 'package-lock.json'
+
+jobs:
+  renovate-post-run:
+    name: Renovate Post Upgrade Hook
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'jkroepke' && (github.actor == 'renovate[bot]' || github.actor == 'mend[bot]')
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+
+      # Using a GitHub App token, because GitHub Actions doesn't run on commits from github-actions bot
+      # Used App:
+      # https://github.com/organizations/prometheus-community/settings/apps/helm-charts-renovate-helper.
+      # Ref: https://github.com/prometheus-community/helm-charts/issues/5213.
+      - uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
+        id: app-token
+        with:
+          app-id: 1248576
+          private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version-file: package.json
+
+      - run: |
+          npm ci
+          npm run all
+
+      - name: Commit changes
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_HEAD_REF: ${{ github.head_ref }}
+        #language=bash
+        run: |
+          # Define the target directory
+          TARGET_DIR="."
+
+          # Fetch deleted files in the target directory
+          DELETED_FILES=$(git diff --diff-filter=D --name-only HEAD -- "$TARGET_DIR")
+
+          # Fetch added/modified files in the target directory
+          MODIFIED_FILES=$(git diff --diff-filter=ACM --name-only HEAD -- "$TARGET_DIR")
+
+          # Create a temporary file for JSON output
+          FILE_CHANGES_JSON_FILE=$(mktemp)
+
+          # Initialize JSON structure
+          echo '{ "deletions": [], "additions": [] }' > "$FILE_CHANGES_JSON_FILE"
+
+          # Add deletions
+          for file in $DELETED_FILES; do
+            jq --arg path "$file" '.deletions += [{"path": $path}]' "$FILE_CHANGES_JSON_FILE" > "$FILE_CHANGES_JSON_FILE.tmp"
+            mv "$FILE_CHANGES_JSON_FILE.tmp" "$FILE_CHANGES_JSON_FILE"
+          done
+
+          # Prepare additions (new or modified files)
+          for file in $MODIFIED_FILES; do
+            jq --rawfile content "$file" --arg path "$file" \
+              '.additions += [{"path": $path, "contents": ($content | @base64)}]' \
+              "$FILE_CHANGES_JSON_FILE" > "$FILE_CHANGES_JSON_FILE.tmp"
+            mv "$FILE_CHANGES_JSON_FILE.tmp" "$FILE_CHANGES_JSON_FILE"
+          done
+
+          # Create a temporary file for the final JSON payload
+          JSON_PAYLOAD_FILE=$(mktemp)
+
+          # Construct the final JSON using jq and store it in a file
+          jq -n --arg repo "$GITHUB_REPOSITORY" \
+                --arg branch "$GITHUB_HEAD_REF" \
+                --arg message "post upgrade changes from renovate" \
+                --arg expectedOid "$GITHUB_SHA" \
+                --slurpfile fileChanges "$FILE_CHANGES_JSON_FILE" \
+                '{
+                  query: "mutation ($input: CreateCommitOnBranchInput!) {
+                    createCommitOnBranch(input: $input) {
+                      commit {
+                        url
+                      }
+                    }
+                  }",
+                  variables: {
+                    input: {
+                      branch: {
+                        repositoryNameWithOwner: $repo,
+                        branchName: $branch
+                      },
+                      message: { headline: $message },
+                      fileChanges: $fileChanges[0],
+                      expectedHeadOid: $expectedOid
+                    }
+                  }
+                }' > "$JSON_PAYLOAD_FILE"
+
+          # Call GitHub API
+          curl https://api.github.com/graphql -f \
+               -sSf -H "Authorization: Bearer $GITHUB_TOKEN" \
+               --data "@$JSON_PAYLOAD_FILE"
+
+          # Clean up temporary files
+          rm "$FILE_CHANGES_JSON_FILE" "$JSON_PAYLOAD_FILE"
