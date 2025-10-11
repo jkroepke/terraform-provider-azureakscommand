@@ -31,4 +31,3 @@ data "azureakscommand_invoke" "this" {
   command = "cat hello"
   context = filebase64(data.archive_file.context.output_path)
 }
-

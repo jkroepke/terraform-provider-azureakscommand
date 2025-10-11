@@ -172,7 +172,7 @@ func (p *AzureAksCommandProvider) Configure(ctx context.Context, req provider.Co
 	subscriptionId := getStringAttributeFromEnvironment(data.SubscriptionId, []string{"ARM_SUBSCRIPTION_ID", "AZURE_SUBSCRIPTION_ID"}, "")
 
 	if subscriptionId == "" {
-		resp.Diagnostics.AddError("Missing subscription_id", "Could not dectect subscription id through ARM_SUBSCRIPTION_ID, AZURE_SUBSCRIPTION_ID or provider attribute.")
+		resp.Diagnostics.AddError("Missing subscription_id", "Could not detect subscription id through ARM_SUBSCRIPTION_ID, AZURE_SUBSCRIPTION_ID or provider attribute.")
 		return
 	}
 
