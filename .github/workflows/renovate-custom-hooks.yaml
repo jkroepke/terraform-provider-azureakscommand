@@ -33,8 +33,7 @@ jobs:
         with:
           node-version-file: package.json
 
-      - run: |
-          make all
+      - run: make
 
       - name: Commit changes
         env:
