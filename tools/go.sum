@@ -1,5 +1,5 @@
-dario.cat/mergo v1.0.1 h1:Ra4+bf83h2ztPIQYNP99R6m+Y7KfnARDfID+a+vLl4s=
-dario.cat/mergo v1.0.1/go.mod h1:uNxQE+84aUszobStD9th8a29P2fMDhsBdgRYvZOxGmk=
+dario.cat/mergo v1.0.2 h1:85+piFYR1tMbRrLcDwR18y4UKJ3aH1Tbzi24VRW1TK8=
+dario.cat/mergo v1.0.2/go.mod h1:E/hbnu0NxMFBjpMIE34DRGLWqDy0g5FuKDhCb31ngxA=
 github.com/BurntSushi/toml v1.5.0 h1:W5quZX/G/csjUnuI8SUYlsHs9M38FC7znL0lIO+DvMg=
 github.com/BurntSushi/toml v1.5.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/Kunde21/markdownfmt/v3 v3.1.0 h1:KiZu9LKs+wFFBQKhrZJrFZwtLnCCWJahL+S+E/3VnM0=
@@ -77,8 +77,8 @@ github.com/hashicorp/terraform-exec v0.24.0 h1:mL0xlk9H5g2bn0pPF6JQZk5YlByqSqrO5
 github.com/hashicorp/terraform-exec v0.24.0/go.mod h1:lluc/rDYfAhYdslLJQg3J0oDqo88oGQAdHR+wDqFvo4=
 github.com/hashicorp/terraform-json v0.27.2 h1:BwGuzM6iUPqf9JYM/Z4AF1OJ5VVJEEzoKST/tRDBJKU=
 github.com/hashicorp/terraform-json v0.27.2/go.mod h1:GzPLJ1PLdUG5xL6xn1OXWIjteQRT2CNT9o/6A9mi9hE=
-github.com/hashicorp/terraform-plugin-docs v0.23.0 h1:sipnfD4/9EJBg9zekym+s1H6qmLAKJHhGWBwvN9v/hE=
-github.com/hashicorp/terraform-plugin-docs v0.23.0/go.mod h1:J4b5AtMRgJlDrwCQz+G4hKABgHY5m56PnsRmdAzBwW8=
+github.com/hashicorp/terraform-plugin-docs v0.24.0 h1:YNZYd+8cpYclQyXbl1EEngbld8w7/LPOm99GD5nikIU=
+github.com/hashicorp/terraform-plugin-docs v0.24.0/go.mod h1:YLg+7LEwVmRuJc0EuCw0SPLxuQXw5mW8iJ5ml/kvi+o=
 github.com/huandu/xstrings v1.5.0 h1:2ag3IFq9ZDANvthTwTiqSSZLjDc+BedvHPAp5tJy2TI=
 github.com/huandu/xstrings v1.5.0/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq4ovT0aE=
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 h1:BQSFePA1RWJOlocH6Fxy8MmwDt+yVQYULKfN0RoTN8A=
