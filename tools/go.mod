@@ -1,6 +1,6 @@
 module tools
 
-go 1.26.3
+go 1.26.4
 
 require github.com/hashicorp/terraform-plugin-docs v0.25.0
 
@@ -45,7 +45,7 @@ require (
 	github.com/zclconf/go-cty v1.18.1 // indirect
 	go.abhg.dev/goldmark/frontmatter v0.3.0 // indirect
 	golang.org/x/crypto v0.52.0 // indirect
-	golang.org/x/exp v0.0.0-20260529124908-c761662dc8c9 // indirect
+	golang.org/x/exp v0.0.0-20260603202125-055de637280b // indirect
 	golang.org/x/mod v0.36.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
