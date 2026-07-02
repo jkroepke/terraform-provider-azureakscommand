@@ -75,8 +75,8 @@ github.com/hashicorp/hc-install v0.9.5 h1:XHCjcMn2563ysuaQ9v9ec2FNc7c2PJOIEEGobA
 github.com/hashicorp/hc-install v0.9.5/go.mod h1:ihEW4LshrNkxq2bU/MpVbKyn+yt1is2hYqUTHDGhG84=
 github.com/hashicorp/terraform-exec v0.25.2 h1:fFLAVEtAjKdGfawGUXDnKooCnqJi+TuohT3W99AGbhk=
 github.com/hashicorp/terraform-exec v0.25.2/go.mod h1:uaQV2oqVLqM4cixJryk6qIWS1qji3GtuwPG5pjGXYfc=
-github.com/hashicorp/terraform-json v0.27.3-0.20260622142350-ff68feb930e6 h1:Qw4jfPkaE07F0S7LiGUA6JRKsGcgwuiLgHuMIoa7rGA=
-github.com/hashicorp/terraform-json v0.27.3-0.20260622142350-ff68feb930e6/go.mod h1:PJIRf+Yzu5iLb52c/xYp1tUOL4jzMzfIAB5gvWWKIWE=
+github.com/hashicorp/terraform-json v0.27.3-0.20260629102718-34ea8d07cdb5 h1:DYvun62V0/Jvtwmm+QsSI9urOiA7YpGEkPkwV0RULug=
+github.com/hashicorp/terraform-json v0.27.3-0.20260629102718-34ea8d07cdb5/go.mod h1:PJIRf+Yzu5iLb52c/xYp1tUOL4jzMzfIAB5gvWWKIWE=
 github.com/hashicorp/terraform-plugin-docs v0.25.0 h1:qHs1V257NxVe8tv6HS4UQfNqjaPP5eUlLeDf7jYk85U=
 github.com/hashicorp/terraform-plugin-docs v0.25.0/go.mod h1:MQggCmY8zgP7R7E/cC0b0cmTvA9hSj3ZKyrrsDjRbLo=
 github.com/huandu/xstrings v1.5.0 h1:2ag3IFq9ZDANvthTwTiqSSZLjDc+BedvHPAp5tJy2TI=
