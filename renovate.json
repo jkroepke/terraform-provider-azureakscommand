@@ -1,5 +1,13 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["github>jkroepke/renovate-config"],
-  "postUpdateOptions": ["gomodTidy","gomodUpdateImportPaths"]
+  "postUpdateOptions": ["gomodTidy","gomodUpdateImportPaths"],
+  "packageRules": [
+    {
+      "description": "Bump the go directive in go.mod and tools/go.mod together. The preset's 'Go tools' rule matches tools/** and would otherwise pull the tools/go.mod go directive into the 'Go tools' group.",
+      "matchManagers": ["gomod"],
+      "matchDatasources": ["golang-version"],
+      "groupName": "go version"
+    }
+  ]
 }
